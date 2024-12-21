@@ -5,6 +5,7 @@ from collections import deque
 from multiprocessing import Manager, Process, Value
 from typing import Optional, Tuple
 
+
 import onnxruntime as ort
 from loguru import logger
 

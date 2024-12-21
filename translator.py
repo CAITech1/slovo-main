@@ -5,7 +5,7 @@ from deep_translator import GoogleTranslator
 
 excel_file_path = 'slovo.xlsx'  # Update with the path to your Excel file
 videos_folder_path = './videos'  # Update with the path to your videos folder
-input_sentence = "drinking"
+input_sentence = "i love you"
 
 def load_excel_data(file_path):
     # Load the Excel file into a DataFrame
