@@ -1,23 +1,41 @@
 import argparse
 import sys
 import time
+import subprocess
 from collections import deque
 from multiprocessing import Manager, Process, Value
 from typing import Optional, Tuple
 
-
 import onnxruntime as ort
 from loguru import logger
-
-ort.set_default_logger_severity(4)  # NOQA
-logger.add(sys.stdout, format="{level} | {message}")  # NOQA
-logger.remove(0)  # NOQA
 import cv2
 import numpy as np
 from omegaconf import OmegaConf
 
 from constants import classes
 
+
+# Define the path to your subprocess
+python_path = "../.venv/Scripts/python.exe"
+index = "./index.py"
+
+# Function to call your subprocess (text-to-video)
+def subprocess_to_index():
+    print("Translating from text to video...")
+    try:
+        result = subprocess.run(
+            [python_path, index],
+            check=True,
+            text=True,
+            capture_output=True
+        )
+    except subprocess.CalledProcessError as e:
+        print(f"Error: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
+
+
+# BaseRecognition and other classes (unchanged)
 
 class BaseRecognition:
     def __init__(self, model_path: str, tensors_list, prediction_list, verbose):
@@ -72,23 +90,8 @@ class Recognition(BaseRecognition):
     def __init__(self, model_path: str, tensors_list: list, prediction_list: list, verbose: bool):
         """
         Initialize recognition model.
-
-        Parameters
-        ----------
-        model_path : str
-            Path to the model.
-        tensors_list : List
-            List of tensors to be used for prediction.
-        prediction_list : List
-            List of predictions.
-
-        Notes
-        -----
-        The recognition model is run in a separate process.
         """
-        super().__init__(
-            model_path=model_path, tensors_list=tensors_list, prediction_list=prediction_list, verbose=verbose
-        )
+        super().__init__(model_path=model_path, tensors_list=tensors_list, prediction_list=prediction_list, verbose=verbose)
         self.started = True
 
     def start(self):
@@ -99,24 +102,9 @@ class RecognitionMP(Process, BaseRecognition):
     def __init__(self, model_path: str, tensors_list, prediction_list, verbose):
         """
         Initialize recognition model.
-
-        Parameters
-        ----------
-        model_path : str
-            Path to the model.
-        tensors_list : Manager.list
-            List of tensors to be used for prediction.
-        prediction_list : Manager.list
-            List of predictions.
-
-        Notes
-        -----
-        The recognition model is run in a separate process.
         """
         super().__init__()
-        BaseRecognition.__init__(
-            self, model_path=model_path, tensors_list=tensors_list, prediction_list=prediction_list, verbose=verbose
-        )
+        BaseRecognition.__init__(self, model_path=model_path, tensors_list=tensors_list, prediction_list=prediction_list, verbose=verbose)
         self.started = Value("i", False)
 
     def run(self):
@@ -128,30 +116,9 @@ class RecognitionMP(Process, BaseRecognition):
 class Runner:
     STACK_SIZE = 6
 
-    def __init__(
-            self,
-            model_path: str,
-            config: OmegaConf = None,
-            mp: bool = False,
-            verbose: bool = False,
-            length: int = STACK_SIZE,
-    ) -> None:
+    def __init__(self, model_path: str, config: OmegaConf = None, mp: bool = False, verbose: bool = False, length: int = STACK_SIZE) -> None:
         """
         Initialize runner.
-
-        Parameters
-        ----------
-        model_path : str
-            Path to the model.
-        config : OmegaConf
-            Configuration file.
-        length : int
-            Deque length for predictions
-
-        Notes
-        -----
-        The runner uses multiprocessing to run the recognition model in a separate process.
-
         """
         self.multiprocess = mp
         self.cap = cv2.VideoCapture(0)
@@ -173,11 +140,6 @@ class Runner:
     def add_frame(self, image):
         """
         Add frame to queue.
-
-        Parameters
-        ----------
-        image : np.ndarray
-            Frame to be added.
         """
         self.frame_counter += 1
         if self.frame_counter == self.frame_interval:
@@ -192,34 +154,20 @@ class Runner:
     def resize(im, new_shape=(224, 224)):
         """
         Resize and pad image while preserving aspect ratio.
-
-        Parameters
-        ----------
-        im : np.ndarray
-            Image to be resized.
-        new_shape : Tuple[int]
-            Size of the new image.
-
-        Returns
-        -------
-        np.ndarray
-            Resized image.
         """
         shape = im.shape[:2]  # current shape [height, width]
         if isinstance(new_shape, int):
             new_shape = (new_shape, new_shape)
 
-        # Scale ratio (new / old)
         r = min(new_shape[0] / shape[0], new_shape[1] / shape[1])
 
-        # Compute padding
         new_unpad = int(round(shape[1] * r)), int(round(shape[0] * r))
         dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]  # wh padding
 
         dw /= 2
         dh /= 2
 
-        if shape[::-1] != new_unpad:  # resize
+        if shape[::-1] != new_unpad:
             im = cv2.resize(im, new_unpad, interpolation=cv2.INTER_LINEAR)
         top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
         left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
@@ -229,13 +177,15 @@ class Runner:
     def run(self):
         """
         Run the runner.
-
-        Notes
-        -----
-        The runner will run until the user presses 'q'.
         """
         if self.multiprocess:
             self.recognizer.start()
+
+        screen_width = 1920  # Replace with your screen's width
+        screen_height = 1080  # Replace with your screen's height
+
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, screen_width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, screen_height)
 
         while self.cap.isOpened():
             if self.recognizer.started:
@@ -254,20 +204,81 @@ class Runner:
                     self.prediction_list.pop(0)
 
                 frame = np.concatenate((frame, text_div), axis=0)
+
+                # Add button to the frame
+                frame = add_button_to_frame(frame)
+
+                # Make the window fullscreen
+                cv2.namedWindow("frame", cv2.WND_PROP_FULLSCREEN)
+                cv2.setWindowProperty("frame", cv2.WND_PROP_FULLSCREEN, 1)  # Set window to fullscreen
                 cv2.imshow("frame", frame)
+
                 condition = cv2.waitKey(10) & 0xFF
-                if condition in {ord("q"), ord("Q"), 27}:
+                if condition in {ord("q"), ord("Q"), 27}:  # q or Esc to quit
                     if self.multiprocess:
                         self.recognizer.kill()
                     self.cap.release()
                     cv2.destroyAllWindows()
                     break
 
+# Adding the button to the top-left corner of the video feed
+# Adding the button to the top-left corner of the video feed
+def add_button_to_frame(frame):
+    button_text = "Back"
+    button_position = (40, 40)
+    button_size = (120, 50)
+    color = (74, 74, 74)
+    text_color = (255, 255, 255)
+    radius = 10  # Radius for rounded corners
 
-import argparse
-from typing import Optional, Tuple
+    # Draw a rounded rectangle for the button
+    top_left = (10, 10)
+    bottom_right = (button_size[0] + 10, button_size[1] + 10)
 
+    # Draw the four rounded corners
+    cv2.ellipse(frame, (top_left[0] + radius, top_left[1] + radius), (radius, radius), 180, 0, 90, color, -1)
+    cv2.ellipse(frame, (bottom_right[0] - radius, top_left[1] + radius), (radius, radius), 270, 0, 90, color, -1)
+    cv2.ellipse(frame, (top_left[0] + radius, bottom_right[1] - radius), (radius, radius), 90, 0, 90, color, -1)
+    cv2.ellipse(frame, (bottom_right[0] - radius, bottom_right[1] - radius), (radius, radius), 0, 0, 90, color, -1)
 
+    # Draw the rectangle part (without the corners)
+    cv2.rectangle(frame, (top_left[0] + radius, top_left[1]), (bottom_right[0] - radius, bottom_right[1]), color, -1)
+    cv2.rectangle(frame, (top_left[0], top_left[1] + radius), (bottom_right[0], bottom_right[1] - radius), color, -1)
+
+    # Add text inside the button
+    cv2.putText(frame, button_text, button_position, cv2.FONT_HERSHEY_COMPLEX, 0.7, text_color, 2)
+
+    return frame
+
+# Function to check if the button is clicked
+def check_button_click(x, y):
+    # Define button position and size
+    button_x_start = 10
+    button_y_start = 10
+    button_x_end = 210  # 200px width of button + 10px padding
+    button_y_end = 60   # 50px height of button + 10px padding
+
+    # Check if the mouse click is inside the button's area
+    if button_x_start < x < button_x_end and button_y_start < y < button_y_end:
+        return True
+    return False
+
+def on_mouse_move(event, x, y, flags, param):
+    if event == cv2.EVENT_MOUSEMOVE:
+        if check_button_click(x, y):
+            # Simulate changing cursor to a pointer (you can add a print statement for feedback)
+            print("Cursor is over the button. Change cursor to pointer.")
+        else:
+            # Simulate changing cursor back to normal
+            print("Cursor is outside the button. Change cursor back to normal.")
+
+# Define the callback function for mouse events
+def on_mouse_click(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:  # Left button clicked
+        if check_button_click(x, y):  # Check if click is inside button
+            subprocess_to_index()
+
+# Argument parsing function
 def parse_arguments(params: Optional[Tuple] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Demo full frame classification...")
 
@@ -282,19 +293,15 @@ def parse_arguments(params: Optional[Tuple] = None) -> argparse.Namespace:
     # Add arguments but they will be overridden by static values
     parser.add_argument("-p", "--config", required=False, type=str, help="Path to config")
     parser.add_argument("--mp", required=False, action="store_true", help="Enable multiprocessing")
-    parser.add_argument("-v", "--verbose", required=False, action="store_true", help="Enable logging")
-    parser.add_argument("-l", "--length", required=False, type=int, default=4, help="Deque length for predictions")
+    parser.add_argument("--verbose", required=False, action="store_true", help="Enable verbose logging")
+    parser.add_argument("--length", required=False, type=int, help="Length of prediction deque")
 
-    known_args, _ = parser.parse_known_args(params)
+    args = parser.parse_args(params if params else [])
+    # Override static args with command-line args
+    for key, value in static_args.items():
+        setattr(args, key, value)
 
-    # Override known_args with static values
-    known_args.config = static_args["config"]
-    known_args.mp = static_args["mp"]
-    known_args.verbose = static_args["verbose"]
-    known_args.length = static_args["length"]
-
-    return known_args
-
+    return args
 
 if __name__ == "__main__":
     args = parse_arguments()

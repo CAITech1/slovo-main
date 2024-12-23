@@ -4,7 +4,7 @@ import cv2
 from deep_translator import GoogleTranslator
 
 excel_file_path = 'slovo.xlsx'  # Update with the path to your Excel file
-videos_folder_path = './videos'  # Update with the path to your videos folder
+videos_folder_path = 'slovo_videos'  # Update with the path to your slovo_videos folder
 input_sentence = "i love you"
 
 def load_excel_data(file_path):
@@ -49,7 +49,7 @@ def translate_sentence_to_russian(sentence):
     translated_words = [translate_word(word) for word in words]
     return translated_words
 
-# Load data, translate, and play videos
+# Load data, translate, and play slovo_videos
 df = load_excel_data(excel_file_path)
 translated_words = translate_sentence_to_russian(input_sentence)
 print(f"Translated Words: {translated_words}")

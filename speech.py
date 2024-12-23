@@ -13,7 +13,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 # File paths
 json_file = "./WLASL_v0.3.json"
-videos_folder = "./videos"
+videos_folder = "./slovo_videos"
 
 # 1. Load JSON file with words
 try:
@@ -109,7 +109,7 @@ class MainWindow(QMainWindow):
         self.video_queue = []
         self.current_video_index = 0
         self.processed_words = []  # To track the words and their corresponding IDs
-        self.total_videos = 0  # Total number of videos
+        self.total_videos = 0  # Total number of slovo_videos
 
         # Connect media status change to track progress
         self.player.mediaStatusChanged.connect(self.handle_media_status)
@@ -170,7 +170,7 @@ class MainWindow(QMainWindow):
                 video_id = id_list[best_match_index]  # Retrieve the corresponding video_id
                 video_path = os.path.join(videos_folder, f"{video_id}.mp4")  # Construct the video file path
 
-                # Check if the video file exists in the videos folder
+                # Check if the video file exists in the slovo_videos folder
                 if os.path.exists(video_path):
                     self.video_queue.append(video_path)
                     self.processed_words.append((best_match[0], video_id))  # Add word and video ID to processed list
@@ -179,7 +179,7 @@ class MainWindow(QMainWindow):
             self.current_video_index = 0
             self.play_next_video()  # Start playing the first video
         else:
-            self.label.setText("No matching videos found.")
+            self.label.setText("No matching slovo_videos found.")
 
     @Slot()
     def play_next_video(self):
@@ -197,7 +197,7 @@ class MainWindow(QMainWindow):
             self.current_video_index += 1  # Move to the next video
         else:
             self.current_video_index = 0  # Reset to the first video
-            self.play_next_video()  # Replay the videos
+            self.play_next_video()  # Replay the slovo_videos
 
     def highlight_sentence(self, current_word):
         original_sentence = " ".join([word for word, _ in self.processed_words])

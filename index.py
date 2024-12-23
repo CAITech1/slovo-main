@@ -3,11 +3,11 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import subprocess
 
-python_path = "./.venv/Scripts/python.exe"
-vosk = "./text-to-sign/vosk.py"  # Path to the vosk.py script
-slovo = "./demo.py" # Path to the demo.py script
+python_path = "../.venv/Scripts/python.exe"
+vosk = "./vosk.py"  # Path to the vosk.py script
+slovo = "./demo.py"  # Path to the demo.py script
 background = "./assets/Index_background.jpg"
-button = "./assets/Index_transparent_button.png" # Path to the button image
+button = "./assets/Index_transparent_button.png"  # Path to the button image
 
 # Translation functions:
 def translate_text_to_video():
@@ -19,8 +19,6 @@ def translate_text_to_video():
             text=True,
             capture_output=True
         )
-        print(result.stdout)  # Display the output of the process
-        messagebox.showinfo("Success", "Translation from text to video completed.")
     except subprocess.CalledProcessError as e:
         messagebox.showerror("Error", f"An error occurred while running the external file: {e}\nOutput: {e.output}")
     except Exception as e:
@@ -35,8 +33,6 @@ def translate_video_to_text():
             text=True,
             capture_output=True
         )
-        print(text_result.stdout)  # Display the output of the process
-        messagebox.showinfo("Success", "Translation from video to text completed.")
     except subprocess.CalledProcessError as e:
         messagebox.showerror("Error", f"An error occurred while running the external file: {e}\nOutput: {e.output}")
     except Exception as e:
@@ -70,7 +66,7 @@ button_image_resized = button_image.resize((button_width, button_height))
 button_photo = ImageTk.PhotoImage(button_image_resized)
 
 # Calculate button positions
-button1_x, button1_y = screen_width // 4, int(screen_height * 0.9)
+button1_x, button1_y = screen_width // 4 - 45, int(screen_height * 0.9)  # Move 20 pixels left
 button2_x, button2_y = (screen_width // 4) * 3, int(screen_height * 0.9)
 
 # Add buttons on the canvas
@@ -80,6 +76,19 @@ button2 = canvas.create_image(button2_x, button2_y, image=button_photo, tags="bu
 # Bind button actions
 canvas.tag_bind(button1, "<Button-1>", lambda event: translate_text_to_video())
 canvas.tag_bind(button2, "<Button-1>", lambda event: translate_video_to_text())
+
+# Change cursor to pointer on hover
+def on_hover(event):
+    canvas.config(cursor="hand2")  # Use "hand2" for pointer cursor in Tkinter
+
+def on_leave(event):
+    canvas.config(cursor="")  # Reset to default cursor
+
+# Bind hover effects to the buttons
+canvas.tag_bind(button1, "<Enter>", on_hover)
+canvas.tag_bind(button1, "<Leave>", on_leave)
+canvas.tag_bind(button2, "<Enter>", on_hover)
+canvas.tag_bind(button2, "<Leave>", on_leave)
 
 # Run the application
 root.mainloop()
