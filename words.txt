@@ -19,6 +19,14 @@ to turn around - e74134ce-7306-4476-910c-ba9c9d74c6e9
 I'm tired of it - 76e2059e-fe30-49d7-be58-93dbebdf018f
 donkey - b03ec883-8edb-4e5f-aaff-172502ca2c25
 animal - 32e530d7-3598-47d3-b344-ceb36bb6fe58
+I'm afraid - 991d89aa-f904-4c19-9a91-14d1a9d7fcf3
+
+great - b2ea91c2-9793-4972-9810-4fbb8f36f426
+work - 1d665cab-8697-44e4-831c-886441786f48
+this year - 3b9d14d9-d94c-4705-aba8-ab05f79295ec
+trust - 65ce6882-4f2f-487b-80a0-7f0fc776539b
+friendly - 6feff11f-4121-4af2-ab70-bdb9c6566512
+fork - 20a9be50-2afa-4675-9b71-fdbcd5562f80
 
 
 
