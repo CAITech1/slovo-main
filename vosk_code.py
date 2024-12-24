@@ -255,9 +255,9 @@ class MainWindow(QMainWindow):
             self.current_video_index += 1
             self.play_next_video()
 
-
-# Run the application
-app = QApplication(sys.argv)
-window = MainWindow()
-window.showFullScreen()
-sys.exit(app.exec())
+if __name__ == "__main__":
+    # Run the application
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.showFullScreen()
+    sys.exit(app.exec())
