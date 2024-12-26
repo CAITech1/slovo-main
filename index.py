@@ -5,7 +5,7 @@ import subprocess
 
 python_path = "../.venv/Scripts/python.exe"
 vosk = "./vosk_code.py"  # Path to the vosk_code.py script
-slovo = "./demo.py"  # Path to the demo.py script
+slovo = "./demo2.py"  # Path to the demo.py script
 background = "./assets/Index_background.jpg"
 button = "./assets/Index_transparent_button.png"  # Path to the button image
 

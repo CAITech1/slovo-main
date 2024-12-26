@@ -2,7 +2,7 @@ import cv2
 
 def main():
     # Open the default camera (camera index 0)
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 
     if not cap.isOpened():
         print("Error: Could not open the camera.")
@@ -11,9 +11,6 @@ def main():
     # Get the video frame width and height
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-    # Define the codec and create VideoWriter object
-    out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'XVID'), 20.0, (frame_width, frame_height))
 
     print("Press 'q' to stop recording.")
 
@@ -25,9 +22,6 @@ def main():
             print("Error: Failed to capture frame.")
             break
 
-        # Write the frame to the output file
-        out.write(frame)
-
         # Display the resulting frame
         cv2.imshow('Recording...', frame)
 
@@ -37,7 +31,6 @@ def main():
 
     # Release the camera, writer, and close all OpenCV windows
     cap.release()
-    out.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
