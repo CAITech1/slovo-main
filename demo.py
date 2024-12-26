@@ -121,7 +121,7 @@ class Runner:
         Initialize runner.
         """
         self.multiprocess = mp
-        self.cap = cv2.VideoCapture(0)
+        self.cap = cv2.VideoCapture(1)
         self.manager = Manager() if self.multiprocess else None
         self.tensors_list = self.manager.list() if self.multiprocess else []
         self.prediction_list = self.manager.list() if self.multiprocess else []

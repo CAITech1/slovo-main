@@ -5,7 +5,7 @@ from deep_translator import GoogleTranslator
 
 excel_file_path = 'slovo.xlsx'  # Update with the path to your Excel file
 videos_folder_path = 'slovo_videos'  # Update with the path to your slovo_videos folder
-input_sentence = "i love you"
+input_sentence = "bag"
 
 def load_excel_data(file_path):
     # Load the Excel file into a DataFrame
@@ -32,7 +32,7 @@ def play_videos_sequentially(translated_words, df, videos_folder):
                     if not ret:
                         break
                     # Resize the frame to 1920x1080
-                    resized_frame = cv2.resize(frame, (650, 550))
+                    resized_frame = cv2.resize(frame, (450, 650))
                     cv2.imshow(f"Word: {word}", resized_frame)
                     if cv2.waitKey(25) & 0xFF == ord('q'):
                         break
