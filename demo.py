@@ -1,18 +1,16 @@
-import argparse
 import sys
+import cv2
 import time
+import argparse
 import subprocess
-from collections import deque
-from multiprocessing import Manager, Process, Value
-from typing import Optional, Tuple
-
+import numpy as np
 import onnxruntime as ort
 from loguru import logger
-import cv2
-import numpy as np
-from omegaconf import OmegaConf
-
+from collections import deque
 from constants import classes
+from omegaconf import OmegaConf
+from typing import Optional, Tuple
+from multiprocessing import Manager, Process, Value
 
 
 # Define the path to your subprocess
@@ -121,7 +119,7 @@ class Runner:
         Initialize runner.
         """
         self.multiprocess = mp
-        self.cap = cv2.VideoCapture(1)
+        self.cap = cv2.VideoCapture(0)
         self.manager = Manager() if self.multiprocess else None
         self.tensors_list = self.manager.list() if self.multiprocess else []
         self.prediction_list = self.manager.list() if self.multiprocess else []
@@ -187,10 +185,36 @@ class Runner:
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, screen_width)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, screen_height)
 
+        def mouse_callback(event, x, y, flags, param):
+            """
+            Callback for mouse clicks.
+            """
+            if event == cv2.EVENT_LBUTTONDOWN:
+                btn_x, btn_y, radius = param
+                distance = ((x - (btn_x + radius)) ** 2 + (y - (btn_y + radius)) ** 2) ** 0.5
+                if distance <= radius:
+                    # Button clicked
+                    print("Rounded button clicked, going back to interface...")
+
+                    # Launch the external interface immediately (non-blocking)
+                    subprocess.Popen([python_path, index])  # Non-blocking process start
+
+                    # Cleanup resources (after launching the new interface)
+                    self.cap.release()
+                    cv2.destroyAllWindows()
+
+                    # Exit the current process
+                    sys.exit()
+
+        # Set mouse callback and make the window fullscreen
+        # Make the window fullscreen
+        cv2.namedWindow("frame", cv2.WND_PROP_FULLSCREEN)  # Create fullscreen window
+        cv2.setWindowProperty("frame", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
         while self.cap.isOpened():
             if self.recognizer.started:
                 _, frame = self.cap.read()
-                text_div = np.zeros((50, frame.shape[1], 3), dtype=np.uint8)
+                text_div = np.zeros((70, frame.shape[1], 3), dtype=np.uint8)
                 self.add_frame(frame)
 
                 if not self.multiprocess:
@@ -198,21 +222,23 @@ class Runner:
 
                 if self.prediction_list:
                     text = "  ".join(self.prediction_list)
-                    cv2.putText(text_div, text, (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 255, 255), 2)
+                    cv2.putText(text_div, text, (20,40), cv2.FONT_HERSHEY_COMPLEX, 1.5, (255, 255, 255), 3)
 
                 if len(self.prediction_list) > self.length:
                     self.prediction_list.pop(0)
 
                 frame = np.concatenate((frame, text_div), axis=0)
 
-                # Add button to the frame
-                frame = add_button_to_frame(frame)
+                # Add rounded button to the frame and get its parameters
+                frame, button_params = add_button_to_frame(frame)
 
-                # Make the window fullscreen
-                cv2.namedWindow("frame", cv2.WND_PROP_FULLSCREEN)
-                cv2.setWindowProperty("frame", cv2.WND_PROP_FULLSCREEN, 1)  # Set window to fullscreen
+                # Attach the mouse callback with button parameters
+                cv2.setMouseCallback("frame", mouse_callback, param=button_params)
+
+                # Show the frame
                 cv2.imshow("frame", frame)
 
+                # Exit conditions
                 condition = cv2.waitKey(10) & 0xFF
                 if condition in {ord("q"), ord("Q"), 27}:  # q or Esc to quit
                     if self.multiprocess:
@@ -221,62 +247,39 @@ class Runner:
                     cv2.destroyAllWindows()
                     break
 
-# Adding the button to the top-left corner of the video feed
-# Adding the button to the top-left corner of the video feed
+
 def add_button_to_frame(frame):
-    button_text = "Back"
-    button_position = (40, 40)
-    button_size = (120, 50)
-    color = (74, 74, 74)
-    text_color = (255, 255, 255)
-    radius = 10  # Radius for rounded corners
+    """
+    Add a rounded button to the frame.
 
-    # Draw a rounded rectangle for the button
-    top_left = (10, 10)
-    bottom_right = (button_size[0] + 10, button_size[1] + 10)
+    Parameters:
+    frame (np.ndarray): The input video frame.
 
-    # Draw the four rounded corners
-    cv2.ellipse(frame, (top_left[0] + radius, top_left[1] + radius), (radius, radius), 180, 0, 90, color, -1)
-    cv2.ellipse(frame, (bottom_right[0] - radius, top_left[1] + radius), (radius, radius), 270, 0, 90, color, -1)
-    cv2.ellipse(frame, (top_left[0] + radius, bottom_right[1] - radius), (radius, radius), 90, 0, 90, color, -1)
-    cv2.ellipse(frame, (bottom_right[0] - radius, bottom_right[1] - radius), (radius, radius), 0, 0, 90, color, -1)
+    Returns:
+    tuple: Updated frame and button rectangle (x, y, radius).
+    """
+    # Button properties
+    center_x, center_y = 100, 100  # Position of the button (top-left corner)
+    radius = 50  # Radius of the rounded button
+    button_color = (0, 122, 255)  # Button color (BGR)
+    text_color = (255, 255, 255)  # Text color
+    thickness = -1  # Fill the circle
 
-    # Draw the rectangle part (without the corners)
-    cv2.rectangle(frame, (top_left[0] + radius, top_left[1]), (bottom_right[0] - radius, bottom_right[1]), color, -1)
-    cv2.rectangle(frame, (top_left[0], top_left[1] + radius), (bottom_right[0], bottom_right[1] - radius), color, -1)
+    # Draw the button as a circle
+    cv2.circle(frame, (center_x, center_y), radius, button_color, thickness)
 
-    # Add text inside the button
-    cv2.putText(frame, button_text, button_position, cv2.FONT_HERSHEY_COMPLEX, 0.7, text_color, 2)
+    # Add text to the button
+    text = "Back"
+    font_scale = 1 # Increased font scale
+    font_thickness = 4  # Increased thickness
+    text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
+    text_x = center_x - text_size[0] // 2
+    text_y = center_y + text_size[1] // 2
+    cv2.putText(frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, font_scale, text_color, font_thickness)
 
-    return frame
+    # Return the updated frame and button parameters
+    return frame, (center_x - radius, center_y - radius, radius)
 
-# Function to check if the button is clicked
-def check_button_click(x, y):
-    # Define button position and size
-    button_x_start = 10
-    button_y_start = 10
-    button_x_end = 210  # 200px width of button + 10px padding
-    button_y_end = 60   # 50px height of button + 10px padding
-
-    # Check if the mouse click is inside the button's area
-    if button_x_start < x < button_x_end and button_y_start < y < button_y_end:
-        return True
-    return False
-
-def on_mouse_move(event, x, y, flags, param):
-    if event == cv2.EVENT_MOUSEMOVE:
-        if check_button_click(x, y):
-            # Simulate changing cursor to a pointer (you can add a print statement for feedback)
-            print("Cursor is over the button. Change cursor to pointer.")
-        else:
-            # Simulate changing cursor back to normal
-            print("Cursor is outside the button. Change cursor back to normal.")
-
-# Define the callback function for mouse events
-def on_mouse_click(event, x, y, flags, param):
-    if event == cv2.EVENT_LBUTTONDOWN:  # Left button clicked
-        if check_button_click(x, y):  # Check if click is inside button
-            subprocess_to_index()
 
 # Argument parsing function
 def parse_arguments(params: Optional[Tuple] = None) -> argparse.Namespace:

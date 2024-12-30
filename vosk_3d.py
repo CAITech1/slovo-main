@@ -1,38 +1,32 @@
 import os
 import sys
 import csv
-from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QScrollArea
-from PySide6.QtMultimediaWidgets import QVideoWidget
-from PySide6.QtMultimedia import QMediaPlayer
-from PySide6.QtCore import Qt, QUrl, QTimer, Slot
+import pyaudio
 from rapidfuzz import process
 from vosk import Model, KaldiRecognizer
-import pyaudio
+from PySide6.QtMultimedia import QMediaPlayer
+from PySide6.QtCore import Qt, QUrl, QTimer, Slot
+from PySide6.QtMultimediaWidgets import QVideoWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget
 
 # Set UTF-8 encoding for console output
 sys.stdout.reconfigure(encoding='utf-8')
 
 # File paths
-csv_file = "./3d_words.csv"  # CSV file containing words and video IDs
 videos_3d_folder = "./3d_videos"  # Folder containing videos for recognized words
 vosk_model_path = "./vosk/vosk-model-small-en-us-0.15"
 
-# 1. Load CSV file with words
+# 1. Load video filenames from the folder
 try:
-    words_list = []
-    id_list = []
-    with open(csv_file, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            words_list.append(row['word'])  # Assuming the CSV column is named 'word'
-            id_list.append(row['video_id'])  # Assuming the CSV column is named 'video_id'
+    video_files = os.listdir(videos_3d_folder)
+    video_files_no_ext = [os.path.splitext(file)[0].lower() for file in video_files]  # Remove extensions for matching
 except Exception as e:
-    print(f"Error loading CSV file: {e}")
+    print(f"Error loading videos from folder: {e}")
     exit()
 
-print("Loaded words and video IDs:", list(zip(words_list, id_list)))
+print("Loaded video files:", video_files_no_ext)
 
-# 2. Check if essential files and folders exist
+# 2. Check if the videos folder exists
 if not os.path.exists(videos_3d_folder):
     print(f"Error: Videos folder {videos_3d_folder} does not exist.")
     exit()
@@ -125,10 +119,10 @@ class MainWindow(QMainWindow):
         self.highlighted_text = []
 
         for word in words:
-            best_match = process.extractOne(word.lower(), words_list)
+            best_match = process.extractOne(word.lower(), video_files_no_ext)  # Match against video filenames
             if best_match and best_match[1] > 70:  # Ensure confidence threshold
                 matched_word = best_match[0]
-                video_path = os.path.join(videos_3d_folder, f"{matched_word}.mp4")
+                video_path = os.path.join(videos_3d_folder, f"{matched_word}.mp4")  # Reconstruct full file path
 
                 if os.path.exists(video_path):
                     self.video_queue.append((matched_word, video_path))
@@ -185,7 +179,7 @@ class MainWindow(QMainWindow):
             if self.current_video_index < len(self.video_queue):
                 self.play_next_video()
             else:
-                QTimer.singleShot(100, self.repeat_sentence)  # Delay to ensure it is visible before repeating
+                QTimer.singleShot(100, self.repeat_sentence)  # Delay to enAsure it is visible before repeating
 
     def repeat_sentence(self):
         # Reset the sentence display and start from the first word
