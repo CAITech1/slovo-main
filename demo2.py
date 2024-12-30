@@ -216,7 +216,7 @@ class Runner:
         while self.cap.isOpened():
             if self.recognizer.started:
                 _, frame = self.cap.read()
-                text_div = np.zeros((50, frame.shape[1], 3), dtype=np.uint8)
+                text_div = np.zeros((70, frame.shape[1], 3), dtype=np.uint8)
                 self.add_frame(frame)
 
                 if not self.multiprocess:
@@ -224,7 +224,7 @@ class Runner:
 
                 if self.prediction_list:
                     text = "  ".join(self.prediction_list)
-                    cv2.putText(text_div, text, (10, 30), cv2.FONT_HERSHEY_COMPLEX, 0.7, (255, 255, 255), 2)
+                    cv2.putText(text_div, text, (20,40), cv2.FONT_HERSHEY_COMPLEX, 1.5, (255, 255, 255), 3)
 
                 if len(self.prediction_list) > self.length:
                     self.prediction_list.pop(0)
@@ -272,8 +272,8 @@ def add_button_to_frame(frame):
 
     # Add text to the button
     text = "Back"
-    font_scale = 1
-    font_thickness = 2
+    font_scale = 1 # Increased font scale
+    font_thickness = 4  # Increased thickness
     text_size = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_thickness)[0]
     text_x = center_x - text_size[0] // 2
     text_y = center_y + text_size[1] // 2
@@ -281,8 +281,6 @@ def add_button_to_frame(frame):
 
     # Return the updated frame and button parameters
     return frame, (center_x - radius, center_y - radius, radius)
-
-
 
 
 # Argument parsing function
