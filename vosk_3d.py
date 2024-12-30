@@ -13,7 +13,7 @@ import pyaudio
 sys.stdout.reconfigure(encoding='utf-8')
 
 # File paths
-csv_file = "./words.csv"  # CSV file containing words and video IDs
+csv_file = "./3d_words.csv"  # CSV file containing words and video IDs
 videos_3d_folder = "./3d_videos"  # Folder containing videos for recognized words
 vosk_model_path = "./vosk/vosk-model-small-en-us-0.15"
 
